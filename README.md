@@ -8,5 +8,6 @@ To run the project we need java 1.8 and maven installed
 
 commands to run:
 mvn clean 
+
 mvn gatling:api-test
 
