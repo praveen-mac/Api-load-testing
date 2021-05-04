@@ -1,0 +1,62 @@
+package hello
+
+import scala.concurrent.duration._
+
+import io.gatling.core.Predef._
+import io.gatling.core.structure.{ChainBuilder, ScenarioBuilder}
+import io.gatling.http.Predef._
+import io.gatling.http.protocol.HttpProtocolBuilder
+
+class LoadTest extends Simulation {
+
+  val httpProtocol: HttpProtocolBuilder = http
+    .baseUrl("http://localhost")
+
+  object Resource {
+    val retrive: ChainBuilder = exec(http("Retriveprofile-API")
+      .get("http://localhost/api/account/profile/user1@outlook.com")
+      .header("Authorization","Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0QGdtYWlsLmNvbSIsImV4cCI6MTU5MzYxNjAxNywiaWF0IjoxNTkzNTk4MDE3fQ.LlbzRvpo8tsAL5JRIXcTHUM-7_rgkPqs2xc1nOIrYWlAr45Z7lVeVSdPickm8fXC9g0oLnrt9JUmaIp-VZqLAQ")
+      .check(status.is(200)))
+
+    val retrive2: ChainBuilder = exec(http("Account-confirm-API")
+      .get("http://localhost/api/account/accountconfirm/user2@gmail.com")
+      .check(status.is(200)))  
+
+    val retrive3: ChainBuilder = exec(http("Register-API")
+      .post("http://localhost/api/account/register")
+      .header("Content-Type", "application/json")
+      .body(StringBody("""{"email":"user3@gmail.com","password":"myself@123","firstName":"user","lastName":"me"}"""))
+      .check(status.is(200)))
+  
+    val retrive4: ChainBuilder = exec(http("Login-API")
+      .post("http://localhost/api/account/login")
+      .header("Content-Type", "application/json")
+      .body(StringBody("""{"email":"test@gmail.com","password":"test@123"}"""))
+      .check(status.is(200)))
+  
+    val retrive5: ChainBuilder = exec(http("Changepassword-API")
+      .post("http://localhost/api/account/changepassword")
+      .header("Content-Type", "application/json")
+      .body(StringBody("""{"email":"test@gmail.com","confirmpassword":"test@123"}"""))
+      .check(status.is(200)))
+
+} 
+
+  val myScenario: ScenarioBuilder = scenario("ChatbotUsers")
+    .exec(Resource.retrive)
+    .exec(Resource.retrive2)
+    .exec(Resource.retrive3)
+    .exec(Resource.retrive4)
+    .exec(Resource.retrive5)
+    
+
+
+  setUp(myScenario.inject(
+    incrementUsersPerSec(2)
+      .times(2)
+      .eachLevelLasting(5 seconds)
+      .separatedByRampsLasting(5 seconds)
+      .startingFrom(10)
+  )).protocols(httpProtocol)
+    .assertions(global.successfulRequests.percent.is(100))
+}
